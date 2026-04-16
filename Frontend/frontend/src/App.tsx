@@ -1,121 +1,162 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import React, { useEffect } from 'react';
+import Toolbar            from './components/Toolbar/Toolbar';
+import TabBar             from './components/Editor/TabBar';
+import CodeEditor         from './components/Editor/CodeEditor';
+import Console            from './components/Console/Console';
+import ErrorReport        from './components/Reports/ErrorReport';
+import SymbolTableReport  from './components/Reports/SymbolTableReport';
+import ASTReport          from './components/Reports/ASTReport';
+import { useIDEStore }    from './store/editorStore';
+import { interpretCode }  from './services/api';
 
-function App() {
-  const [count, setCount] = useState(0)
+
+export default function App() {
+  const { activePanel, setRunning, setResults, activeTab } = useIDEStore();
+
+  // ── Global keyboard shortcut: Ctrl+Enter → Run ────────────────────────────
+  useEffect(() => {
+    async function onKey(e: KeyboardEvent) {
+      if (e.ctrlKey && e.key === 'Enter') {
+        e.preventDefault();
+        const tab = activeTab();
+        if (!tab) return;
+        setRunning(true);
+        try {
+          const result = await interpretCode(tab.content);
+          setResults(result);
+          useIDEStore.getState().setActivePanel(
+            result.errors.length > 0 ? 'errors' : 'console'
+          );
+        } finally {
+          setRunning(false);
+        }
+      }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [activeTab, setRunning, setResults]);
+
+  // ── Render the active bottom panel ────────────────────────────────────────
+  function renderPanel() {
+    switch (activePanel) {
+      case 'console': return <Console />;
+      case 'errors':  return <ErrorReport />;
+      case 'symbols': return <SymbolTableReport />;
+      case 'ast':     return <ASTReport />;
+      default:        return <Console />;
+    }
+  }
 
   return (
     <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+      {/* ── Global styles injected once ──────────────────────────────────── */}
+      <style>{GLOBAL_CSS}</style>
 
-      <div className="ticks"></div>
+      <div style={layout.root}>
+        {/* ── Top bar ──────────────────────────────────────────────────── */}
+        <Toolbar />
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+        {/* ── File tabs ────────────────────────────────────────────────── */}
+        <TabBar />
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
+        {/* ── Main content: editor + panel ─────────────────────────────── */}
+        <div style={layout.main}>
+          {/* Editor column */}
+          <div style={layout.editorCol}>
+            <CodeEditor />
+          </div>
+
+          {/* Vertical divider */}
+          <div style={layout.divider} />
+
+          {/* Bottom panel column */}
+          <div style={layout.panelCol}>
+            {renderPanel()}
+          </div>
+        </div>
+
+        {/* ── Footer ───────────────────────────────────────────────────── */}
+        <footer style={layout.footer}>
+          <span>GoScript IDE · OLC1 · USAC Ingeniería en Ciencias y Sistemas</span>
+          <span>Parte 1 — Análisis Léxico + Sintáctico</span>
+        </footer>
+      </div>
     </>
-  )
+  );
 }
 
-export default App
+// ─── Layout ──────────────────────────────────────────────────────────────────
+const layout: Record<string, React.CSSProperties> = {
+  root: {
+    display:        'flex',
+    flexDirection:  'column',
+    height:         '100vh',
+    background:     '#0d1117',
+    overflow:       'hidden',
+    color:          '#e6edf3',
+  },
+  main: {
+    display:   'flex',
+    flex:       1,
+    overflow:  'hidden',
+    minHeight: 0,
+  },
+  editorCol: {
+    display:       'flex',
+    flexDirection: 'column',
+    flex:          '0 0 60%',
+    overflow:      'hidden',
+    minWidth:       0,
+  },
+  divider: {
+    width:      '1px',
+    background: '#1c2333',
+    flexShrink: 0,
+    cursor:     'col-resize',
+  },
+  panelCol: {
+    display:       'flex',
+    flexDirection: 'column',
+    flex:          '1 1 40%',
+    overflow:      'hidden',
+    minWidth:       0,
+  },
+  footer: {
+    display:        'flex',
+    alignItems:     'center',
+    justifyContent: 'space-between',
+    height:          22,
+    padding:        '0 12px',
+    background:     '#010409',
+    borderTop:      '1px solid #1c2333',
+    fontFamily:     "'JetBrains Mono', monospace",
+    fontSize:        10,
+    color:          '#3d4f63',
+    userSelect:     'none',
+    flexShrink:      0,
+  },
+};
+
+// ─── Global CSS reset ────────────────────────────────────────────────────────
+const GLOBAL_CSS = `
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body, #root {
+    height: 100%;
+    background: #0d1117;
+    color: #e6edf3;
+    font-family: 'Syne', sans-serif;
+  }
+
+  ::-webkit-scrollbar        { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track  { background: transparent; }
+  ::-webkit-scrollbar-thumb  { background: #1c2333; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #30363d; }
+
+  button:hover { filter: brightness(1.12); }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.35; }
+  }
+`;
