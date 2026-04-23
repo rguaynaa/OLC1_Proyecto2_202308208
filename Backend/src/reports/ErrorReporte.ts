@@ -1,9 +1,11 @@
 // Recopilación centralizada de errores para todas las fases de análisis.
 
 
-export type ErrorType = 'Léxico' | 'Sintáctico' | 'Semántico';
+export type TipoError = 'Léxico' | 'Sintáctico' | 'Semántico';
 
-export interface GoScriptError {
+export type ErrorType = TipoError;
+
+export interface ErrorGoScript {
   // categoría del error (léxico, sintáctico, semántico)
   type: ErrorType;
   // descripción legible para el usuario
@@ -12,37 +14,39 @@ export interface GoScriptError {
   column: number;
 }
 
-export class ErrorReporter {
-  private errors: GoScriptError[] = [];
+export type GoScriptError = ErrorGoScript;
 
-// Agrega un error al reporte
-  add(error: GoScriptError): void {
-    this.errors.push(error);
+export class ReportadorErrores {
+  private errores: ErrorGoScript[] = [];
+
+  /** Agrega un error ya construido */
+  agregar(error: ErrorGoScript): void {
+    this.errores.push(error);
   }
 
-// Método de conveniencia para agregar errores sin crear el objeto completo
-  addError(
-    type: ErrorType,
-    description: string,
-    line: number,
-    column: number
+  /** Forma abreviada: construye y agrega el error */
+  agregarError(
+    tipo: TipoError,
+    descripcion: string,
+    linea: number,
+    columna: number
   ): void {
-    this.errors.push({ type, description, line, column });
+    this.errores.push({ type: tipo, description: descripcion, line: linea, column: columna });
   }
 
-  getErrors(): GoScriptError[] {
-    return [...this.errors];
+  obtenerErrores(): ErrorGoScript[] {
+    return [...this.errores];
   }
 
-  hasErrors(): boolean {
-    return this.errors.length > 0;
+  tieneErrores(): boolean {
+    return this.errores.length > 0;
   }
 
-  clear(): void {
-    this.errors = [];
+  limpiar(): void {
+    this.errores = [];
   }
 
-  get count(): number {
-    return this.errors.length;
+  get cantidad(): number {
+    return this.errores.length;
   }
 }

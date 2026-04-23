@@ -1,14 +1,22 @@
 %lex
 
+
+ 
+
 /*- Bloque  de comentarios -*/
 
 %x BLOCK_COMMENT
-<INITIAL>"/*"           {this.begin('BLOCK_COMMENT'):}
-<BLOCK_COMMENT>"*/"     {this.begin('INITIAL');}
 
+%%
+
+
+<INITIAL>"/*"           {this.begin('BLOCK_COMMENT'); }
+
+<BLOCK_COMMENT>"*/"     {this.begin('INITIAL');}
 <BLOCK_COMMENT>[^*\n]+  {/*skip*/}
 <BLOCK_COMMENT>\n       {/*skip - rastrea automaticamente*/}
 <BLOCK_COMMENT>"*"      {/*skip lone star*/}
+
 
 /* linea de comentarios */
 <INITIAL>"//"[^\n]*     {/* skip */}
@@ -1085,9 +1093,7 @@ field_init
         { $$ = { field: $1, value: $3, line: @1.first_line, column: @1.first_column }; }
     ;
 
-/* ==============================================================
-   OPTIONAL SEMICOLON
-   ============================================================== */
+/* punto y coma
 
 opt_semi
     : SEMICOLON

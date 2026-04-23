@@ -7,11 +7,11 @@ import interpreterRouter from './routes/interprete';
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ── Middlewares ─────────────────────────────────────────────────────────────
+
 app.use(cors({ origin: '*' }));
 app.use(express.json({ limit: '10mb' }));
 
-// ── Auto-generate parser on startup ─────────────────────────────────────────
+//Generar automáticamente el analizador sintáctico al iniciar
 function ensureParserExists(): void {
   const grammarPath = path.join(__dirname, 'grammar', 'goscript.jison');
   const parserPath  = path.join(__dirname, 'grammar', 'parser.js');
@@ -22,7 +22,7 @@ function ensureParserExists(): void {
   }
 
   try {
-    // Always regenerate so grammar changes are picked up immediately
+    //Regenera siempre para que los cambios gramaticales se detecten de inmediato.
     console.log('[GoScript] Generating parser from grammar...');
     const jison    = require('jison');
     const grammar  = fs.readFileSync(grammarPath, 'utf8');
@@ -36,18 +36,18 @@ function ensureParserExists(): void {
 
 ensureParserExists();
 
-// ── Routes ───────────────────────────────────────────────────────────────────
+//Routes
 app.use('/api', interpreterRouter);
 
-// Health check
+
 app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', service: 'GoScript Interprete', version: '1.0.0' });
+  res.json({ status: 'ok', service: 'GoScript Interpreter', version: '1.0.0' });
 });
 
-// ── Start ────────────────────────────────────────────────────────────────────
+//Start
 app.listen(PORT, () => {
   console.log(`[GoScript] Server running on http://localhost:${PORT}`);
-  console.log(`[GoScript] API ready at http://localhost:${PORT}/api/interprete`);
+  console.log(`[GoScript] API ready at http://localhost:${PORT}/api/interpret`);
 });
 
 export default app;

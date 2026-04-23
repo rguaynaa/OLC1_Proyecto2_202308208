@@ -9,7 +9,6 @@ import ASTReport          from './components/Reports/ASTReport';
 import { useIDEStore }    from './store/editorStore';
 import { interpretCode }  from './services/api';
 
-
 export default function App() {
   const { activePanel, setRunning, setResults, activeTab } = useIDEStore();
 
