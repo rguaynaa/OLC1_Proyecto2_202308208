@@ -10,9 +10,6 @@ import { useIDEStore }    from './store/editorStore';
 import { interpretCode }  from './services/api';
 import { useResizable }   from './utils/useResizable';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// App  –  Part 3: resizable panels + syntax-highlighted editor
-// ─────────────────────────────────────────────────────────────────────────────
 
 export default function App() {
   const {
@@ -91,8 +88,8 @@ export default function App() {
 
         {/* ── Footer ────────────────────────────────────────────── */}
         <footer style={layout.footer}>
-          <span>GoScript IDE · OLC1 · USAC Ingeniería en Ciencias y Sistemas</span>
-          <span style={{ color: '#238636' }}>Parte 6 — AST Gráfico + Structs completos</span>
+          <span>GoScript IDE · OLC1 · Ingeniería en Ciencias y Sistemas</span>
+          <span style={{ color: '#238636' }}>Rodrigo Andres Guay Minera 202308208</span>
         </footer>
       </div>
     </>
