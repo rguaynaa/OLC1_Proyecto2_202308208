@@ -236,7 +236,7 @@ export class ReportadorAST {
       case 'UnaryExpr':      return `${this.escaparEtiqueta(nodo.operator)}(…)`;
       case 'Literal': {
         const v = nodo.dataType === 'string'
-          ? `"${this.escaparEtiqueta(String(nodo.value ?? '').substring(0, 20))}"`
+          ? `\\"${this.escaparEtiqueta(String(nodo.value ?? '').substring(0, 20))}\\"`
           : this.escaparEtiqueta(String(nodo.value ?? ''));
         return `${nodo.dataType}\\n${v}`;
       }

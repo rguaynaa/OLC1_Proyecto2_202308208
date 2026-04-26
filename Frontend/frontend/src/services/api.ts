@@ -1,6 +1,3 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// services/api.ts  –  HTTP client for the GoScript backend.
-// ─────────────────────────────────────────────────────────────────────────────
 
 import axios from 'axios';
 import type { InterpretRequest, InterpretResponse } from '../types';
@@ -34,6 +31,7 @@ export async function interpretCode(
 
     return {
       ast: null,
+      dot: '',
       output: [],
       errors: [
         {

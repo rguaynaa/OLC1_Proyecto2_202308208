@@ -2,7 +2,6 @@
 // types/index.ts  –  Shared TypeScript interfaces for the GoScript IDE.
 // ─────────────────────────────────────────────────────────────────────────────
 
-// ── Error ─────────────────────────────────────────────────────────────────────
 export type ErrorType = 'Léxico' | 'Sintáctico' | 'Semántico';
 
 export interface GoScriptError {
@@ -12,7 +11,6 @@ export interface GoScriptError {
   column: number;
 }
 
-// ── Symbol Table ─────────────────────────────────────────────────────────────
 export type SymbolKind = 'Variable' | 'Función' | 'Struct' | 'Parámetro';
 
 export interface SymbolEntry {
@@ -24,21 +22,19 @@ export interface SymbolEntry {
   column: number;
 }
 
-// ── API Request / Response ────────────────────────────────────────────────────
 export interface InterpretRequest {
   code: string;
 }
 
 export interface InterpretResponse {
-  /** Raw AST returned by Jison (plain object tree) */
   ast: any;
-  /** Lines printed by fmt.Println (populated from Part 2) */
+  /** Graphviz DOT string for the AST report */
+  dot: string;
   output: string[];
   errors: GoScriptError[];
   symbols: SymbolEntry[];
 }
 
-// ── Editor tabs ───────────────────────────────────────────────────────────────
 export interface EditorTab {
   id: string;
   filename: string;
@@ -46,5 +42,4 @@ export interface EditorTab {
   isDirty: boolean;
 }
 
-// ── Active panel in the bottom section ───────────────────────────────────────
 export type BottomPanel = 'console' | 'errors' | 'symbols' | 'ast';

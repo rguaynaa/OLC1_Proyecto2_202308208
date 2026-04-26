@@ -8,34 +8,46 @@ import SymbolTableReport  from './components/Reports/SymbolTableReport';
 import ASTReport          from './components/Reports/ASTReport';
 import { useIDEStore }    from './store/editorStore';
 import { interpretCode }  from './services/api';
+import { useResizable }   from './utils/useResizable';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// App  –  Part 3: resizable panels + syntax-highlighted editor
+// ─────────────────────────────────────────────────────────────────────────────
 
 export default function App() {
-  const { activePanel, setRunning, setResults, activeTab } = useIDEStore();
+  const {
+    activePanel, setRunning, setResults, activeTab,
+  } = useIDEStore();
 
-  // ── Global keyboard shortcut: Ctrl+Enter → Run ────────────────────────────
+  const { leftPct, containerRef, onMouseDown } = useResizable({
+    initialLeft: 60,
+    minLeft: 25,
+    maxLeft: 82,
+  });
+
+  // ── Global keyboard shortcut: Ctrl+Enter → Run ───────────────────────────
   useEffect(() => {
     async function onKey(e: KeyboardEvent) {
       if (e.ctrlKey && e.key === 'Enter') {
         e.preventDefault();
         const tab = activeTab();
         if (!tab) return;
-        setRunning(true);
+        const store = useIDEStore.getState();
+        if (store.isRunning) return;
+        store.setRunning(true);
         try {
           const result = await interpretCode(tab.content);
-          setResults(result);
-          useIDEStore.getState().setActivePanel(
-            result.errors.length > 0 ? 'errors' : 'console'
-          );
+          store.setResults(result);
+          store.setActivePanel(result.errors.length > 0 ? 'errors' : 'console');
         } finally {
-          setRunning(false);
+          store.setRunning(false);
         }
       }
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [activeTab, setRunning, setResults]);
+  }, [activeTab]);
 
-  // ── Render the active bottom panel ────────────────────────────────────────
   function renderPanel() {
     switch (activePanel) {
       case 'console': return <Console />;
@@ -48,36 +60,39 @@ export default function App() {
 
   return (
     <>
-      {/* ── Global styles injected once ──────────────────────────────────── */}
       <style>{GLOBAL_CSS}</style>
 
       <div style={layout.root}>
-        {/* ── Top bar ──────────────────────────────────────────────────── */}
+        {/* ── Top bar ───────────────────────────────────────────── */}
         <Toolbar />
 
-        {/* ── File tabs ────────────────────────────────────────────────── */}
+        {/* ── File tabs ─────────────────────────────────────────── */}
         <TabBar />
 
-        {/* ── Main content: editor + panel ─────────────────────────────── */}
-        <div style={layout.main}>
-          {/* Editor column */}
-          <div style={layout.editorCol}>
+        {/* ── Main: editor ║ panel ──────────────────────────────── */}
+        <div style={layout.main} ref={containerRef}>
+          {/* Left: editor */}
+          <div style={{ ...layout.panel, flex: `0 0 ${leftPct}%` }}>
             <CodeEditor />
           </div>
 
-          {/* Vertical divider */}
-          <div style={layout.divider} />
+          {/* Resizable divider */}
+          <div
+            style={layout.divider}
+            onMouseDown={onMouseDown}
+            title="Arrastrar para redimensionar"
+          />
 
-          {/* Bottom panel column */}
-          <div style={layout.panelCol}>
+          {/* Right: active panel */}
+          <div style={{ ...layout.panel, flex: `1 1 ${100 - leftPct}%` }}>
             {renderPanel()}
           </div>
         </div>
 
-        {/* ── Footer ───────────────────────────────────────────────────── */}
+        {/* ── Footer ────────────────────────────────────────────── */}
         <footer style={layout.footer}>
           <span>GoScript IDE · OLC1 · USAC Ingeniería en Ciencias y Sistemas</span>
-          <span>Parte 1 — Análisis Léxico + Sintáctico</span>
+          <span style={{ color: '#238636' }}>Parte 6 — AST Gráfico + Structs completos</span>
         </footer>
       </div>
     </>
@@ -87,52 +102,34 @@ export default function App() {
 // ─── Layout ──────────────────────────────────────────────────────────────────
 const layout: Record<string, React.CSSProperties> = {
   root: {
-    display:        'flex',
-    flexDirection:  'column',
-    height:         '100vh',
-    background:     '#0d1117',
-    overflow:       'hidden',
-    color:          '#e6edf3',
+    display: 'flex', flexDirection: 'column',
+    height: '100vh', background: '#0d1117',
+    overflow: 'hidden', color: '#e6edf3',
   },
   main: {
-    display:   'flex',
-    flex:       1,
-    overflow:  'hidden',
-    minHeight: 0,
+    display: 'flex', flex: 1,
+    overflow: 'hidden', minHeight: 0,
+    position: 'relative',
   },
-  editorCol: {
-    display:       'flex',
-    flexDirection: 'column',
-    flex:          '0 0 60%',
-    overflow:      'hidden',
-    minWidth:       0,
+  panel: {
+    display: 'flex', flexDirection: 'column',
+    overflow: 'hidden', minWidth: 0,
   },
   divider: {
-    width:      '1px',
+    width: 4,
     background: '#1c2333',
+    cursor: 'col-resize',
     flexShrink: 0,
-    cursor:     'col-resize',
-  },
-  panelCol: {
-    display:       'flex',
-    flexDirection: 'column',
-    flex:          '1 1 40%',
-    overflow:      'hidden',
-    minWidth:       0,
+    transition: 'background 0.15s',
+    zIndex: 10,
+    position: 'relative',
   },
   footer: {
-    display:        'flex',
-    alignItems:     'center',
-    justifyContent: 'space-between',
-    height:          22,
-    padding:        '0 12px',
-    background:     '#010409',
-    borderTop:      '1px solid #1c2333',
-    fontFamily:     "'JetBrains Mono', monospace",
-    fontSize:        10,
-    color:          '#3d4f63',
-    userSelect:     'none',
-    flexShrink:      0,
+    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+    height: 22, padding: '0 12px',
+    background: '#010409', borderTop: '1px solid #1c2333',
+    fontFamily: "'JetBrains Mono', monospace", fontSize: 10,
+    color: '#3d4f63', userSelect: 'none', flexShrink: 0,
   },
 };
 
@@ -157,5 +154,15 @@ const GLOBAL_CSS = `
   @keyframes pulse {
     0%, 100% { opacity: 1; }
     50%       { opacity: 0.35; }
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  /* Textarea selection colour */
+  textarea::selection {
+    background: rgba(88, 166, 255, 0.25);
+    color: transparent;
   }
 `;

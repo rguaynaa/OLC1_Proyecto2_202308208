@@ -1,30 +1,25 @@
+
 %lex
 
-
- 
-
-/*- Bloque  de comentarios -*/
-
+/* Exclusive start condition for block comments */
 %x BLOCK_COMMENT
 
 %%
 
+/* ── Block comments ──────────────────────────────────────── */
+<INITIAL>"/*"                   { this.begin('BLOCK_COMMENT'); }
+<BLOCK_COMMENT>"*/"             { this.begin('INITIAL'); }
+<BLOCK_COMMENT>[^*\n]+          { /* skip */ }
+<BLOCK_COMMENT>\n               { /* skip – jison tracks yylineno automatically */ }
+<BLOCK_COMMENT>"*"              { /* skip lone star */ }
 
-<INITIAL>"/*"           {this.begin('BLOCK_COMMENT'); }
+/* ── Line comments ───────────────────────────────────────── */
+<INITIAL>"//"[^\n]*             { /* skip */ }
 
-<BLOCK_COMMENT>"*/"     {this.begin('INITIAL');}
-<BLOCK_COMMENT>[^*\n]+  {/*skip*/}
-<BLOCK_COMMENT>\n       {/*skip - rastrea automaticamente*/}
-<BLOCK_COMMENT>"*"      {/*skip lone star*/}
-
-
-/* linea de comentarios */
-<INITIAL>"//"[^\n]*     {/* skip */}
-
-/* Espacio en blanco*/
+/* ── Whitespace ──────────────────────────────────────────── */
 <INITIAL>[ \t\r\n]+             { /* skip */ }
 
-/* Palabras clave  (identificadores) */
+/* ── Keywords (must precede IDENTIFIER rule) ─────────────── */
 <INITIAL>"func"                 { return 'FUNC'; }
 <INITIAL>"var"                  { return 'VAR'; }
 <INITIAL>"if"                   { return 'IF'; }
@@ -42,23 +37,23 @@
 <INITIAL>"true"                 { return 'TRUE'; }
 <INITIAL>"false"                { return 'FALSE'; }
 
-/* palabras clave primitivas*/
+/* ── Primitive type keywords ─────────────────────────────── */
 <INITIAL>"int"                  { return 'INT_TYPE'; }
 <INITIAL>"float64"              { return 'FLOAT64_TYPE'; }
 <INITIAL>"string"               { return 'STRING_TYPE'; }
 <INITIAL>"bool"                 { return 'BOOL_TYPE'; }
 <INITIAL>"rune"                 { return 'RUNE_TYPE'; }
 
-/* Literales*/
+/* ── Literals ────────────────────────────────────────────── */
 <INITIAL>[0-9]+"."[0-9]+        { return 'FLOAT_LIT'; }
 <INITIAL>[0-9]+                 { return 'INT_LIT'; }
 <INITIAL>\"(\\.|[^"\\])*\"      { return 'STRING_LIT'; }
 <INITIAL>\'(\\.|[^'\\])\'       { return 'RUNE_LIT'; }
 
-/* IDENTIFICADOR */
+/* ── Identifier (after all keywords) ────────────────────── */
 <INITIAL>[a-zA-Z_][a-zA-Z0-9_]* { return 'IDENTIFIER'; }
 
-/* operadores compuestos*/
+/* ── Compound operators (order matters – longest first) ──── */
 <INITIAL>":="                   { return 'DECLARE_ASSIGN'; }
 <INITIAL>"+="                   { return 'PLUS_ASSIGN'; }
 <INITIAL>"-="                   { return 'MINUS_ASSIGN'; }
@@ -73,7 +68,7 @@
 <INITIAL>"++"                   { return 'INC'; }
 <INITIAL>"--"                   { return 'DEC'; }
 
-/* operadores Char */
+/* ── Single-char operators ───────────────────────────────── */
 <INITIAL>"<"                    { return 'LT'; }
 <INITIAL>">"                    { return 'GT'; }
 <INITIAL>"="                    { return 'ASSIGN'; }
@@ -84,7 +79,7 @@
 <INITIAL>"%"                    { return 'MOD'; }
 <INITIAL>"!"                    { return 'NOT'; }
 
-/* signos de puntuacion */
+/* ── Punctuation ─────────────────────────────────────────── */
 <INITIAL>"."                    { return 'DOT'; }
 <INITIAL>","                    { return 'COMMA'; }
 <INITIAL>";"                    { return 'SEMICOLON'; }
@@ -96,10 +91,10 @@
 <INITIAL>"["                    { return 'LBRACKET'; }
 <INITIAL>"]"                    { return 'RBRACKET'; }
 
-/*EOF */
+/* ── EOF ─────────────────────────────────────────────────── */
 <INITIAL><<EOF>>                { return 'EOF'; }
 
-/* ERROR LEXICO , caracter no reconocido */
+/* ── Unknown character → lexical error ──────────────────── */
 <INITIAL>.                      {
     if (typeof yy !== 'undefined' && yy.errors) {
         yy.errors.push({
@@ -113,7 +108,7 @@
 
 /lex
 
-/*  operadores de precedencia */
+/* ── Operator precedence (lowest → highest) ─────────────── */
 %right ASSIGN PLUS_ASSIGN MINUS_ASSIGN TIMES_ASSIGN DIVIDE_ASSIGN
 %left  OR
 %left  AND
@@ -128,7 +123,9 @@
 
 %%
 
-/* programa */
+/* ==============================================================
+   PROGRAM
+   ============================================================== */
 
 program
     : global_decl_list EOF
@@ -150,7 +147,9 @@ global_decl
     | var_decl_stmt
     ;
 
-/* declaracion de metodos y funciones*/
+/* ==============================================================
+   FUNCTION DECLARATION
+   ============================================================== */
 
 func_decl
     : FUNC IDENTIFIER LPAREN param_list RPAREN return_type block
@@ -198,7 +197,9 @@ return_type
         { $$ = null; }
     ;
 
-/*tipo de expresiones*/
+/* ==============================================================
+   TYPE EXPRESSIONS
+   ============================================================== */
 
 type_expr
     : INT_TYPE              { $$ = 'int'; }
@@ -211,7 +212,9 @@ type_expr
         { $$ = '[]' + $3; }
     ;
 
-/*declaracion de estructuras*/
+/* ==============================================================
+   STRUCT DECLARATION
+   ============================================================== */
 
 struct_decl
     : STRUCT IDENTIFIER LBRACE struct_field_list RBRACE opt_semi
@@ -238,7 +241,9 @@ struct_field
         { $$ = { fieldType: $1, name: $2, line: @2.first_line, column: @2.first_column }; }
     ;
 
-/* BLOCK */
+/* ==============================================================
+   BLOCK
+   ============================================================== */
 
 block
     : LBRACE stmt_list RBRACE
@@ -309,7 +314,7 @@ var_decl_stmt
         }
     ;
 
-/* x := expr */
+/* x := expr  /  x := Persona{...} */
 short_var_decl_stmt
     : IDENTIFIER DECLARE_ASSIGN expr opt_semi
         {
@@ -323,11 +328,36 @@ short_var_decl_stmt
                 column: @1.first_column
             };
         }
+    | IDENTIFIER DECLARE_ASSIGN struct_literal opt_semi
+        {
+            $$ = {
+                type: 'VarDecl',
+                name: $1,
+                varType: null,
+                value: $3,
+                isShort: true,
+                line: @1.first_line,
+                column: @1.first_column
+            };
+        }
     ;
 
-/* Persona p = {...}   /   Persona p  (struct-typed var) */
+/* Persona p = {...}  /  Persona p = Persona{...}  /  Persona p */
 typed_var_decl_stmt
-    : IDENTIFIER IDENTIFIER ASSIGN expr opt_semi
+    : IDENTIFIER IDENTIFIER ASSIGN struct_literal opt_semi
+        {
+            $$ = {
+                type: 'VarDecl',
+                name: $2,
+                varType: $1,
+                value: $4,
+                isShort: false,
+                isTyped: true,
+                line: @1.first_line,
+                column: @1.first_column
+            };
+        }
+    | IDENTIFIER IDENTIFIER ASSIGN expr opt_semi
         {
             $$ = {
                 type: 'VarDecl',
@@ -483,7 +513,9 @@ expr_stmt
         { $$ = $1; }
     ;
 
-/* if/else */
+/* ==============================================================
+   IF / ELSE
+   ============================================================== */
 
 if_stmt
     : IF expr block else_clause
@@ -652,7 +684,9 @@ for_post
         { $$ = null; }
     ;
 
-/* swicht/case */
+/* ==============================================================
+   SWITCH / CASE
+   ============================================================== */
 
 switch_stmt
     : SWITCH expr LBRACE case_list RBRACE opt_semi
@@ -707,7 +741,9 @@ case_clause
         }
     ;
 
-/* estado de transferencias */
+/* ==============================================================
+   TRANSFER STATEMENTS
+   ============================================================== */
 
 return_stmt
     : RETURN expr opt_semi
@@ -726,7 +762,9 @@ continue_stmt
         { $$ = { type: 'ContinueStatement', line: @1.first_line, column: @1.first_column }; }
     ;
 
-/* expresiones */
+/* ==============================================================
+   EXPRESSIONS
+   ============================================================== */
 
 expr
     /* Arithmetic */
@@ -774,7 +812,6 @@ primary_expr
     : literal
     | call_expr
     | slice_literal
-    | struct_literal
     | struct_anon_literal
     /* Slice index access:   a[i]  or  a[i][j] */
     | IDENTIFIER LBRACKET expr RBRACKET
@@ -1093,7 +1130,9 @@ field_init
         { $$ = { field: $1, value: $3, line: @1.first_line, column: @1.first_column }; }
     ;
 
-/* punto y coma
+/* ==============================================================
+   OPTIONAL SEMICOLON
+   ============================================================== */
 
 opt_semi
     : SEMICOLON
@@ -1101,7 +1140,3 @@ opt_semi
     ;
 
 %%
-
-
-
-

@@ -204,6 +204,9 @@ export class Interprete {
     let valorFinal: RuntimeValue;
 
     if (nodo.value !== null && nodo.value !== undefined) {
+      if (nodo.varType && nodo.value.type === 'StructLiteral' && !nodo.value.structName) {
+        nodo.value.structName = nodo.varType;
+      }
       const valorRaw = this.evaluar(nodo.value, entorno);
 
       if (nodo.varType) {
@@ -240,6 +243,13 @@ export class Interprete {
 
     if (op === '++' || op === '--') {
       return this.ejecutarIncDec(nodo.target, op, entorno, nodo.line, nodo.column);
+    }
+
+    if (op === '=' && nodo.value.type === 'StructLiteral' && !nodo.value.structName) {
+      const actual = this.leerLValue(nodo.target, entorno, nodo.line, nodo.column);
+      if (actual.type !== 'nil') {
+        nodo.value.structName = actual.type;
+      }
     }
 
     const nuevoVal = this.evaluar(nodo.value, entorno);
