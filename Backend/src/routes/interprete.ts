@@ -28,7 +28,9 @@ router.post('/interpret', (req: Request, res: Response) => {
     });
   }
 
-  //Cargar parser
+  //Análisis léxico + sintáctico 
+  const erroresLexSin: ErrorGoScript[] = [];
+
   const parser = cargarParser();
   if (!parser) {
     return res.status(500).json({
@@ -37,32 +39,15 @@ router.post('/interpret', (req: Request, res: Response) => {
     });
   }
 
-  //Análisis léxico + sintáctico 
-  const erroresLexSin: ErrorGoScript[] = [];
-
-  parser.yy = {
+  parser.parser.yy = {
     errors: erroresLexSin,
-    parseError(str: string, hash: any) {
-      const linea   = (hash?.loc?.first_line   ?? 0);
-      const columna = (hash?.loc?.first_column ?? 0) + 1;
-
-      let descripcion = `Error sintáctico cerca de "${hash?.text ?? '?'}"`;
-      if (hash?.expected?.length > 0) {
-        const esperados = hash.expected
-          .map((t: string) => t.replace(/['"]/g, ''))
-          .filter((t: string) => t !== 'EOF')
-          .slice(0, 5).join(', ');
-        if (esperados) descripcion += `. Se esperaba: ${esperados}`;
-      }
-      erroresLexSin.push({ type: 'Sintáctico', description: descripcion, line: linea, column: columna });
-    },
   };
 
   let ast: any = null;
   try {
     ast = parser.parse(code);
   } catch (err: any) {
-    if (!erroresLexSin.some(e => e.type === 'Sintáctico')) {
+    if (erroresLexSin.length === 0) {
       erroresLexSin.push({
         type: 'Sintáctico',
         description: err?.message ?? 'Error sintáctico desconocido.',
@@ -70,6 +55,9 @@ router.post('/interpret', (req: Request, res: Response) => {
       });
     }
   }
+
+  // Si hay errores sintácticos/léxicos, pero AST parcial se generó
+  // los errores estarán en erroresLexSin, y se procesarán normal.
 
   // Sin AST → solo errores léxicos/sintácticos
   if (!ast) {

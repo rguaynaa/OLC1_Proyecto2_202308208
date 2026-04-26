@@ -134,7 +134,7 @@ program
 
 global_decl_list
     : global_decl_list global_decl
-        { $$ = $1; $$.push($2); }
+        { $$ = $1; if ($2 !== null && $2 !== undefined) $$.push($2); }
     | global_decl_list opt_semi
         { $$ = $1; }
     | /* empty */
@@ -145,6 +145,18 @@ global_decl
     : func_decl
     | struct_decl
     | var_decl_stmt
+    | error
+        {
+            if (typeof yy !== 'undefined' && yy.errors) {
+                yy.errors.push({
+                    type: 'Sintáctico',
+                    description: 'Error sintáctico (global): no se esperaba "' + yytext + '"',
+                    line: this._$.first_line,
+                    column: this._$.first_column
+                });
+            }
+            $$ = null;
+        }
     ;
 
 /* ==============================================================
@@ -284,6 +296,18 @@ stmt
     | break_stmt
     | continue_stmt
     | block
+    | error
+        {
+            if (typeof yy !== 'undefined' && yy.errors) {
+                yy.errors.push({
+                    type: 'Sintáctico',
+                    description: 'Error sintáctico en sentencia: no se esperaba "' + yytext + '"',
+                    line: this._$.first_line,
+                    column: this._$.first_column
+                });
+            }
+            $$ = null;
+        }
     ;
 
 /* var x int   /   var x int = expr */
